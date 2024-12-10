@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using SplineMesh;
+
 public class WaterBendingControll : MonoBehaviour
 {
     [SerializeField] float _PointCount;
@@ -21,6 +22,7 @@ public class WaterBendingControll : MonoBehaviour
     [SerializeField] float _PuddleScaleSpeed;
 
     private Vector3 _target;
+
     public void WaterBend(Vector3 target)
     {
         _target = target;
@@ -57,9 +59,10 @@ public class WaterBendingControll : MonoBehaviour
         while (lerp < 1)
         {
             _PuddleParticle.transform.localScale = Vector3.Lerp(startPuddleScale, endPuddleScale, lerp);
-            lerp += Time.deltaTime* _PuddleScaleSpeed;
+            lerp += Time.deltaTime * _PuddleScaleSpeed;
             yield return null;
         }
+
         _Spline.gameObject.SetActive(true);
         _PuddleParticle.Play();
         while (length < totalLength)
@@ -74,21 +77,24 @@ public class WaterBendingControll : MonoBehaviour
                 {
                     _PuddleParticle.Stop();
                 }
+
                 _ContortAlong.Contort((length - meshLength) / _Spline.Length);
-                if (length + meshLength > totalLength+ _SplashActivationOffset)
+                if (length + meshLength > totalLength + _SplashActivationOffset)
                 {
                     if (!_SplashParticle.isPlaying)
                     {
                         _SplashParticle.gameObject.SetActive(true);
-                        _SplashParticle.transform.position=_target;
+                        _SplashParticle.transform.position = _target;
                         _SplashParticle.Play();
                     }
                 }
             }
+
             length += Time.deltaTime * _AnimSpeed * speedCurveLerp;
             speedCurveLerp += _SpeedDelta * Time.deltaTime;
             yield return null;
         }
+
         _Spline.gameObject.SetActive(false);
         _SplashParticle.Stop();
         Destroy(gameObject, 2f);
@@ -96,47 +102,51 @@ public class WaterBendingControll : MonoBehaviour
 
     private void ConfigureSpline()
     {
-        List<SplineNode> nodes = new List<SplineNode>(_Spline.nodes);
-        for (int i = 2; i < nodes.Count; i++)
+        var nodes = new System.Collections.Generic.List<SplineNode>(_Spline.nodes);
+
+        if (nodes.Count == 0)
         {
-            _Spline.RemoveNode(nodes[i]);
+            Vector3 parentPosLocal = transform.InverseTransformPoint(transform.parent.position);
+            Vector3 parentForwardLocal =
+                transform.InverseTransformPoint(transform.parent.position + transform.parent.forward);
+            SplineNode startNode = new SplineNode(parentPosLocal, parentForwardLocal);
+            _Spline.AddNode(startNode);
+            nodes.Add(startNode);
+        }
+        else
+        {
+            SplineNode firstNode = nodes[0];
+            Vector3 parentPosLocal = transform.InverseTransformPoint(transform.parent.position);
+            Vector3 parentForwardLocal =
+                transform.InverseTransformPoint(transform.parent.position + transform.parent.forward);
+            firstNode.Position = parentPosLocal;
+            firstNode.Direction = parentForwardLocal;
+            _Spline.nodes[0] = firstNode;
         }
 
         Vector3 targetDirection = (_target - transform.position);
-        transform.forward = new Vector3(targetDirection.x, 0, targetDirection.z).normalized;
+        Vector3 flatDirection = new Vector3(targetDirection.x, 0, targetDirection.z).normalized;
+        transform.forward = flatDirection;
 
-        int sign = Random.Range(0, 2) == 0 ? 1 : -1;
-        float angle = 90* sign;
-        float height = 0;
-        for (int i = 0; i < _PointCount; i++)
+        SplineNode finalNode;
+        if (nodes.Count > 1)
         {
-            if (_Spline.nodes.Count <= i)
-            {
-                _Spline.AddNode(new SplineNode(Vector3.zero, Vector3.forward));
-            }
-            Vector3 normal = Quaternion.Euler(0, angle, 0) * transform.forward;
-            Vector3 pos = transform.position + normal * _Radius;
-            pos.y = height;
-            Vector3 direction = pos + Quaternion.Euler(Random.Range(-30,30), Random.Range(60,120)*sign, Random.Range(-30, 30)) * normal * _Radius / 2f;
-            if (i == 0)
-            {
-                direction = pos + Vector3.up * _Radius;
-            }
-
-            _Spline.nodes[i].Position = transform.InverseTransformPoint(pos);
-            _Spline.nodes[i].Direction = transform.InverseTransformPoint(direction);
-
-            height += _HeightDelta;
-            angle += 90* sign;
+            finalNode = nodes[^1];
+        }
+        else
+        {
+            finalNode = new SplineNode(Vector3.zero, Vector3.forward);
+            _Spline.AddNode(finalNode);
+            nodes = new System.Collections.Generic.List<SplineNode>(_Spline.nodes);
         }
 
-        Vector3 targetNodePosition = transform.InverseTransformPoint(_target);
+        finalNode.Position = transform.InverseTransformPoint(_target);
 
-        Quaternion randomRotation = Quaternion.Euler(Random.Range(0, 90), Random.Range(-40, 40), 0);
-        Vector3 targetNodeDirection = _target + randomRotation * (transform.forward * (_target-transform.position).magnitude*Random.Range(0.2f,1f));
+        Vector3 nodeWorldPos = transform.TransformPoint(finalNode.Position);
+        Vector3 directionToTarget = (_target - nodeWorldPos).normalized;
+        Vector3 directionWorld = nodeWorldPos + directionToTarget;
+        finalNode.Direction = transform.InverseTransformPoint(directionWorld);
 
-        targetNodeDirection= transform.InverseTransformPoint(targetNodeDirection);
-        SplineNode node = new SplineNode(targetNodePosition, targetNodeDirection);
-        _Spline.AddNode(node);
+        _Spline.nodes[nodes.Count - 1] = finalNode;
     }
 }

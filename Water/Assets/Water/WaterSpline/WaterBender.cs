@@ -19,7 +19,7 @@ public class WaterBender : MonoBehaviour
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
-            if(Physics.Raycast(ray,out hit))
+            if (Physics.Raycast(ray, out hit))
             {
                 Attack(hit.point);
             }
@@ -28,7 +28,7 @@ public class WaterBender : MonoBehaviour
 
     public void Attack(Vector3 target)
     {
-        WaterBendingControll water = Instantiate(_WaterPrefab, transform.position, Quaternion.identity);
+        WaterBendingControll water = Instantiate(_WaterPrefab, transform.position, Quaternion.identity, transform);
         water.WaterBend(target);
     }
 }
