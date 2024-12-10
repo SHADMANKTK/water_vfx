@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 #if UNITY_EDITOR
-using UnityEditor.Experimental.SceneManagement;
+
 #endif
 
 namespace SplineMesh {
@@ -27,7 +27,7 @@ namespace SplineMesh {
         [Tooltip("Material to apply on the bent mesh.")]
         public Material material;
         [Tooltip("Physic material to apply on the bent mesh.")]
-        public PhysicMaterial physicMaterial;
+        public PhysicsMaterial physicMaterial;
         [Tooltip("Translation to apply on the mesh before bending it.")]
         public Vector3 translation;
         [Tooltip("Rotation to apply on the mesh before bending it.")]
@@ -78,7 +78,7 @@ namespace SplineMesh {
         public void CreateMeshes() {
 #if UNITY_EDITOR
             // we don't update if we are in prefab mode
-            if (PrefabStageUtility.GetCurrentPrefabStage() != null) return;
+            if (UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() != null) return;
 #endif
             var used = new List<GameObject>();
 
